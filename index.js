@@ -1,42 +1,45 @@
 import * as esbuild from 'esbuild';
-import paths from './config/paths';
-import { getFilePaths } from './config/paths';
+import {sassPlugin} from 'esbuild-sass-plugin';
+import paths, {getFilePaths} from './config/paths';
 
 const collection = {};
 
+const log = (msg,...pattern) => {
+  const decorated = `🚀 ${msg} 🚀`;
+  return console.log(decorated, ...pattern);
+};
+
+// build collection of entry files from search criteria
 Object.keys(paths).forEach((key) => {
-  console.log(key, paths[key]);
   const files = getFilePaths(paths[key]);
   collection[key] = files;
 });
 
-console.log(collection);
+log('#collection', collection);
 
 console.log("Hello via Bun!");
 
-let examplePlugin = {
-  name: 'example',
-  setup(build) {
-    build.onResolve({ filter: /^example$/ }, async () => {
-      const result = await build.resolve('./src', {
-        kind: 'import-statement',
-        resolveDir: './dist',
-      })
-      if (result.errors.length > 0) {
-        return { errors: result.errors }
-      }
-      return { path: result.path, external: true }
-    })
-  },
+for (const key in collection) {
+  console.log(key, collection[key]);
+  await esbuild.build({
+    entryPoints: collection[key],
+    bundle: true,
+    outdir: 'dist',
+    logLevel: 'info',
+    target: 'es2015',
+    loader: { '.js': 'jsx', '.scss': 'css'},
+    plugins: [sassPlugin()],
+    minify: true,
+  });
 }
 
-await esbuild.build({
-  entryPoints: ['src/sample.js'],
-  bundle: true,
-  outfile: 'dist/sample.js',
-  logLevel: 'info',
-  target: 'es2015',
-  loader: { '.js': 'jsx', '.scss': 'css'},
-  plugins: [examplePlugin],
-  minify: true,
-});
+// await esbuild.build({
+//   entryPoints: collection,
+//   bundle: true,
+//   outdir: 'dist',
+//   logLevel: 'info',
+//   target: 'es2015',
+//   loader: { '.js': 'jsx', '.scss': 'css'},
+//   plugins: [sassPlugin()],
+//   minify: true,
+// });
